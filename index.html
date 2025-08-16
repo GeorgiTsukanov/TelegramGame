@@ -1,97 +1,209 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Simple Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Clicker Game</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background: #f0f0f0; }
-        canvas { display: block; margin: 0 auto; background: #fff; }
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        
+        #game-container {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            background-color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+        }
+        
+        #score {
+            font-size: 24px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        #target {
+            width: 100px;
+            height: 100px;
+            background-color: #007aff;
+            border-radius: 50%;
+            margin: 20px auto;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+        
+        #target:active {
+            transform: scale(0.95);
+        }
+        
+        button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #0062cc;
+        }
+        
+        #upgrades {
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .upgrade {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+    <div id="game-container">
+        <h1>Telegram Clicker</h1>
+        <div id="score">Очки: 0</div>
+        <div id="target">КЛИКАЙ!</div>
+        <div id="upgrades">
+            <h3>Улучшения:</h3>
+            <div class="upgrade">
+                <p>Автокликер (1 клик/сек)</p>
+                <p>Цена: 50 очков</p>
+                <button onclick="buyUpgrade('autoClicker', 50)">Купить</button>
+            </div>
+            <div class="upgrade">
+                <p>Улучшенный клик (x2 за клик)</p>
+                <p>Цена: 100 очков</p>
+                <button onclick="buyUpgrade('clickMultiplier', 100)">Купить</button>
+            </div>
+        </div>
+        <button onclick="shareScore()">Поделиться результатом</button>
+    </div>
+
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Устанавливаем размеры canvas под размеры окна
-        canvas.width = window.innerWidth * 0.9;
-        canvas.height = window.innerHeight * 0.9;
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
         
         // Игровые переменные
         let score = 0;
-        const circle = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            radius: 30,
-            dx: 4,
-            dy: 4,
-            color: '#FF5252'
-        };
+        let autoClicker = 0;
+        let clickMultiplier = 1;
+        let autoClickerInterval;
         
-        // Обработчик клика
-        canvas.addEventListener('click', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            
-            // Проверяем попадание по кругу
-            const distance = Math.sqrt(
-                Math.pow(mouseX - circle.x, 2) + 
-                Math.pow(mouseY - circle.y, 2)
-            );
-            
-            if (distance < circle.radius) {
-                score++;
-                circle.color = getRandomColor();
-            }
+        // Элементы DOM
+        const scoreElement = document.getElementById('score');
+        const targetElement = document.getElementById('target');
+        
+        // Обработчик клика по мишени
+        targetElement.addEventListener('click', () => {
+            score += clickMultiplier;
+            updateScore();
+            animateTarget();
         });
         
-        // Главный игровой цикл
-        function gameLoop() {
-            // Очищаем canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Обновляем позицию круга
-            circle.x += circle.dx;
-            circle.y += circle.dy;
-            
-            // Проверяем столкновение с границами
-            if (circle.x + circle.radius > canvas.width || circle.x - circle.radius < 0) {
-                circle.dx = -circle.dx;
-            }
-            
-            if (circle.y + circle.radius > canvas.height || circle.y - circle.radius < 0) {
-                circle.dy = -circle.dy;
-            }
-            
-            // Рисуем круг
-            ctx.beginPath();
-            ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
-            ctx.fillStyle = circle.color;
-            ctx.fill();
-            ctx.closePath();
-            
-            // Рисуем счет
-            ctx.font = '24px Arial';
-            ctx.fillStyle = '#333';
-            ctx.fillText(`Score: ${score}`, 20, 40);
-            
-            requestAnimationFrame(gameLoop);
+        // Функция обновления счета
+        function updateScore() {
+            scoreElement.textContent = `Очки: ${score}`;
         }
         
-        function getRandomColor() {
-            const letters = '0123456789ABCDEF';
-            let color = '#';
-            for (let i = 0; i < 6; i++) {
-                color += letters[Math.floor(Math.random() * 16)];
-            }
-            return color;
+        // Анимация мишени при клике
+        function animateTarget() {
+            targetElement.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                targetElement.style.transform = 'scale(1)';
+            }, 100);
         }
         
-        // Запускаем игру
-        gameLoop();
+        // Покупка улучшений
+        function buyUpgrade(type, cost) {
+            if (score >= cost) {
+                score -= cost;
+                updateScore();
+                
+                switch (type) {
+                    case 'autoClicker':
+                        autoClicker++;
+                        if (autoClicker === 1) {
+                            startAutoClicker();
+                        }
+                        break;
+                    case 'clickMultiplier':
+                        clickMultiplier *= 2;
+                        break;
+                }
+                
+                // Показать всплывающее сообщение в Telegram
+                if (tg.showAlert) {
+                    tg.showAlert(`Улучшение "${type}" куплено!`);
+                } else {
+                    alert(`Улучшение "${type}" куплено!`);
+                }
+            } else {
+                if (tg.showAlert) {
+                    tg.showAlert('Недостаточно очков!');
+                } else {
+                    alert('Недостаточно очков!');
+                }
+            }
+        }
+        
+        // Автокликер
+        function startAutoClicker() {
+            if (autoClickerInterval) clearInterval(autoClickerInterval);
+            autoClickerInterval = setInterval(() => {
+                score += autoClicker * clickMultiplier;
+                updateScore();
+            }, 1000);
+        }
+        
+        // Поделиться результатом
+        function shareScore() {
+            if (tg.sendData) {
+                tg.sendData(JSON.stringify({
+                    action: 'share_score',
+                    score: score
+                }));
+            } else {
+                alert(`Ваш счет: ${score}. В Telegram можно поделиться этим результатом!`);
+            }
+        }
+        
+        // Инициализация игры
+        updateScore();
+        
+        // Обработчик закрытия игры (для Telegram)
+        tg.onEvent('viewportChanged', (isStateStable) => {
+            if (isStateStable) {
+                if (tg.isExpanded) {
+                    // Игра видима
+                } else {
+                    // Игра свернута, можно приостановить
+                }
+            }
+        });
     </script>
 </body>
 </html>
