@@ -127,4 +127,18 @@ upgradeButtons.forEach(button => {
 
 // Запуск игры при загрузке страницы
 window.addEventListener('DOMContentLoaded', initGame);
+
+// Интеграция с Telegram (опционально)
+if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    // Можно добавить дополнительные функции для Telegram
+    // Например, отправку результатов на сервер бота
+    tg.MainButton.setText("Сохранить прогресс");
+    tg.MainButton.show();
+    tg.MainButton.onClick(() => {
+        tg.sendData(JSON.stringify({
+            userId: tg.initDataUnsafe.user.id,
+            clicks: clicks,
+            cps: clicksPerSecond
+        }));
+    });
 }
