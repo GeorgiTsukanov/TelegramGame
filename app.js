@@ -1,46 +1,130 @@
 // Инициализация Telegram WebApp
 const tg = window.Telegram.WebApp;
 
-// Проверяем, открыто ли приложение в Telegram
-if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    // Получаем данные пользователя
-    const user = tg.initDataUnsafe.user;
+// Игровые переменные
+let clicks = 0;
+let clicksPerSecond = 0;
+let upgrades = [];
+
+// Элементы DOM
+const clicksElement = document.getElementById('clicks');
+const cpsElement = document.getElementById('cps');
+const clickButton = document.getElementById('click-button');
+const upgradeButtons = document.querySelectorAll('.upgrade');
+
+// Инициализация игры
+function initGame() {
+    // Проверяем, есть ли сохраненные данные в cookies
+    const savedData = getCookie('clickerData');
     
-    // Форматируем данные для отображения
-    const userDataHTML = `
-        <img src="${user.photo_url || 'https://via.placeholder.com/100'}" alt="Avatar" class="avatar">
-        <p><strong>ID:</strong> ${user.id}</p>
-        <p><strong>Имя:</strong> ${user.first_name}</p>
-        ${user.last_name ? `<p><strong>Фамилия:</strong> ${user.last_name}</p>` : ''}
-        ${user.username ? `<p><strong>Username:</strong> @${user.username}</p>` : ''}
-        ${user.language_code ? `<p><strong>Язык:</strong> ${user.language_code}</p>` : ''}
-        <p><strong>Платформа:</strong> ${tg.platform}</p>
-        <p><strong>Цветовая схема:</strong> ${tg.colorScheme}</p>
-    `;
+    if (savedData) {
+        const data = JSON.parse(savedData);
+        clicks = data.clicks || 0;
+        clicksPerSecond = data.clicksPerSecond || 0;
+        upgrades = data.upgrades || [];
+        
+        // Восстанавливаем состояния улучшений
+        upgradeButtons.forEach(button => {
+            const upgradeId = button.id;
+            if (upgrades.includes(upgradeId)) {
+                button.disabled = true;
+            }
+        });
+    }
     
-    // Вставляем данные в DOM
-    document.getElementById('user-data').innerHTML = userDataHTML;
+    // Если открыто в Telegram, используем тему Telegram
+    if (tg.initDataUnsafe) {
+        tg.expand(); // Разворачиваем на весь экран
+        tg.enableClosingConfirmation(); // Запрос подтверждения при закрытии
+    }
     
-    // Развертываем приложение на весь экран (опционально)
-    tg.expand();
-} else {
-    // Если приложение открыто не в Telegram
-    document.getElementById('user-data').innerHTML = `
-        <p>Это приложение предназначено для работы внутри Telegram.</p>
-        <p>Пожалуйста, откройте его через Telegram бота или мини-приложение.</p>
-    `;
+    updateUI();
+    startAutoClicker();
 }
 
-// Пример обработчика кнопки
-function sendDataToBot() {
-    const data = {
-        user_id: tg.initDataUnsafe.user.id,
-        action: 'button_click'
+// Функция клика
+function handleClick() {
+    clicks++;
+    updateUI();
+    saveGame();
+}
+
+// Автокликер
+function startAutoClicker() {
+    setInterval(() => {
+        if (clicksPerSecond > 0) {
+            clicks += clicksPerSecond;
+            updateUI();
+            saveGame();
+        }
+    }, 1000);
+}
+
+// Покупка улучшения
+function buyUpgrade(button) {
+    const cost = parseInt(button.dataset.cost);
+    const cps = parseInt(button.dataset.cps);
+    
+    if (clicks >= cost) {
+        clicks -= cost;
+        clicksPerSecond += cps;
+        button.disabled = true;
+        upgrades.push(button.id);
+        updateUI();
+        saveGame();
+    } else {
+        alert('Недостаточно кликов!');
+    }
+}
+
+// Обновление интерфейса
+function updateUI() {
+    clicksElement.textContent = clicks;
+    cpsElement.textContent = clicksPerSecond;
+    
+    // Обновляем доступность кнопок улучшений
+    upgradeButtons.forEach(button => {
+        const cost = parseInt(button.dataset.cost);
+        button.disabled = upgrades.includes(button.id) || clicks < cost;
+    });
+}
+
+// Сохранение игры в cookies
+function saveGame() {
+    const gameData = {
+        clicks,
+        clicksPerSecond,
+        upgrades
     };
     
-    // Отправляем данные боту
-    tg.sendData(JSON.stringify(data));
-    
-    // Закрываем приложение (опционально)
-    tg.close();
+    setCookie('clickerData', JSON.stringify(gameData), 365);
+}
+
+// Работа с cookies
+function setCookie(name, value, days) {
+    const date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    const expires = "expires=" + date.toUTCString();
+    document.cookie = name + "=" + value + ";" + expires + ";path=/";
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
+    }
+    return null;
+}
+
+// Обработчики событий
+clickButton.addEventListener('click', handleClick);
+upgradeButtons.forEach(button => {
+    button.addEventListener('click', () => buyUpgrade(button));
+});
+
+// Запуск игры при загрузке страницы
+window.addEventListener('DOMContentLoaded', initGame);
 }
