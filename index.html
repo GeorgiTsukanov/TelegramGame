@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Click Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            background-color: #fff;
+            border: 2px solid #333;
+            overflow: hidden;
+        }
+        #target {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #ff5252;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: transform 0.1s;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+            color: #333;
+        }
+        #timer {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="target"></div>
+        <div id="score">Score: 0</div>
+        <div id="timer">Time: 30</div>
+    </div>
+
+    <script>
+        // Game elements
+        const target = document.getElementById('target');
+        const gameContainer = document.getElementById('game-container');
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');
+        
+        // Game variables
+        let score = 0;
+        let timeLeft = 30;
+        let gameActive = true;
+        
+        // Set initial target position
+        moveTarget();
+        
+        // Target click event
+        target.addEventListener('click', function() {
+            if (!gameActive) return;
+            
+            score++;
+            scoreElement.textContent = `Score: ${score}`;
+            
+            // Add click effect
+            target.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                target.style.transform = 'scale(1)';
+            }, 100);
+            
+            moveTarget();
+        });
+        
+        // Move target to random position
+        function moveTarget() {
+            const containerWidth = gameContainer.clientWidth - target.clientWidth;
+            const containerHeight = gameContainer.clientHeight - target.clientHeight;
+            
+            const randomX = Math.floor(Math.random() * containerWidth);
+            const randomY = Math.floor(Math.random() * containerHeight);
+            
+            target.style.left = `${randomX}px`;
+            target.style.top = `${randomY}px`;
+        }
+        
+        // Game timer
+        const timer = setInterval(() => {
+            timeLeft--;
+            timerElement.textContent = `Time: ${timeLeft}`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                gameActive = false;
+                target.style.display = 'none';
+                
+                // Game over message
+                const gameOver = document.createElement('div');
+                gameOver.textContent = `Game Over! Score: ${score}`;
+                gameOver.style.position = 'absolute';
+                gameOver.style.top = '50%';
+                gameOver.style.left = '50%';
+                gameOver.style.transform = 'translate(-50%, -50%)';
+                gameOver.style.fontSize = '24px';
+                gameOver.style.color = '#333';
+                gameContainer.appendChild(gameOver);
+            }
+        }, 1000);
+        
+        // Handle Telegram theme (if running in Telegram)
+        if (window.TelegramGameProxy) {
+            const theme = TelegramGameProxy.receiveEvent('theme_changed');
+            if (theme && theme.params) {
+                document.body.style.backgroundColor = theme.params.bg_color || '#18222d';
+                document.body.style.color = theme.params.text_color || '#ffffff';
+            }
+        }
+    </script>
+</body>
+</html>
