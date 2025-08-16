@@ -174,7 +174,7 @@
         function startAutoClicker() {
             if (autoClickerInterval) clearInterval(autoClickerInterval);
             autoClickerInterval = setInterval(() => {
-                score += autoClicker * clickMultiplier;
+                score += autoClicker;
                 updateScore();
             }, 1000);
         }
