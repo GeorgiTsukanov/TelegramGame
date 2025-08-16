@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Mini App Example</title>
+    <title>Telegram Clicker Game</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
@@ -12,29 +12,76 @@
             margin: 0 auto;
             padding: 20px;
             text-align: center;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
         }
-        .user-data {
-            background: #f5f5f5;
-            padding: 20px;
+        .clicker-container {
+            margin-top: 30px;
+        }
+        #click-button {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background-color: var(--tg-theme-button-color, #50a8eb);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            font-size: 24px;
+            border: none;
+            cursor: pointer;
+            margin: 20px auto;
+            transition: transform 0.1s;
+        }
+        #click-button:active {
+            transform: scale(0.95);
+        }
+        .stats {
+            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            padding: 15px;
             border-radius: 10px;
             margin-top: 20px;
-            text-align: left;
         }
-        .avatar {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            margin: 0 auto 15px;
-            display: block;
+        .upgrades {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .upgrade {
+            background-color: var(--tg-theme-button-color, #50a8eb);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .upgrade:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
-    <h1>Telegram Mini App Demo</h1>
-    <p>Данные вашего Telegram аккаунта:</p>
+    <h1>Telegram Clicker</h1>
     
-    <div id="user-data" class="user-data">
-        <p>Пожалуйста, откройте это приложение через Telegram.</p>
+    <div class="clicker-container">
+        <div class="stats">
+            <h2>Клики: <span id="clicks">0</span></h2>
+            <p>Кликов в секунду: <span id="cps">0</span></p>
+        </div>
+        
+        <button id="click-button">КЛИКАЙ!</button>
+        
+        <div class="upgrades">
+            <button class="upgrade" id="upgrade1" data-cost="10" data-cps="1">
+                Автокликер (+1/сек)<br>Цена: 10
+            </button>
+            <button class="upgrade" id="upgrade2" data-cost="50" data-cps="2">
+                Улучшенный кликер (+2/сек)<br>Цена: 50
+            </button>
+            <button class="upgrade" id="upgrade3" data-cost="100" data-cps="5">
+                Про кликер (+5/сек)<br>Цена: 100
+            </button>
+        </div>
     </div>
     
     <script src="app.js"></script>
