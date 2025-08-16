@@ -1,144 +1,86 @@
 // Инициализация Telegram WebApp
 const tg = window.Telegram.WebApp;
 
-// Игровые переменные
-let clicks = 0;
-let clicksPerSecond = 0;
-let upgrades = [];
-
 // Элементы DOM
-const clicksElement = document.getElementById('clicks');
-const cpsElement = document.getElementById('cps');
+const counterElement = document.getElementById('counter');
 const clickButton = document.getElementById('click-button');
-const upgradeButtons = document.querySelectorAll('.upgrade');
+const usernameElement = document.getElementById('username');
 
-// Инициализация игры
-function initGame() {
-    // Проверяем, есть ли сохраненные данные в cookies
-    const savedData = getCookie('clickerData');
-    
-    if (savedData) {
-        const data = JSON.parse(savedData);
-        clicks = data.clicks || 0;
-        clicksPerSecond = data.clicksPerSecond || 0;
-        upgrades = data.upgrades || [];
-        
-        // Восстанавливаем состояния улучшений
-        upgradeButtons.forEach(button => {
-            const upgradeId = button.id;
-            if (upgrades.includes(upgradeId)) {
-                button.disabled = true;
-            }
-        });
-    }
-    
-    // Если открыто в Telegram, используем тему Telegram
-    if (tg.initDataUnsafe) {
-        tg.expand(); // Разворачиваем на весь экран
-        tg.enableClosingConfirmation(); // Запрос подтверждения при закрытии
-    }
-    
-    updateUI();
-    startAutoClicker();
+// Инициализация счетчика
+let counter = 0;
+
+// Функция для работы с cookies
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
-// Функция клика
-function handleClick() {
-    clicks++;
-    updateUI();
-    saveGame();
-}
-
-// Автокликер
-function startAutoClicker() {
-    setInterval(() => {
-        if (clicksPerSecond > 0) {
-            clicks += clicksPerSecond;
-            updateUI();
-            saveGame();
-        }
-    }, 1000);
-}
-
-// Покупка улучшения
-function buyUpgrade(button) {
-    const cost = parseInt(button.dataset.cost);
-    const cps = parseInt(button.dataset.cps);
-    
-    if (clicks >= cost) {
-        clicks -= cost;
-        clicksPerSecond += cps;
-        button.disabled = true;
-        upgrades.push(button.id);
-        updateUI();
-        saveGame();
-    } else {
-        alert('Недостаточно кликов!');
-    }
-}
-
-// Обновление интерфейса
-function updateUI() {
-    clicksElement.textContent = clicks;
-    cpsElement.textContent = clicksPerSecond;
-    
-    // Обновляем доступность кнопок улучшений
-    upgradeButtons.forEach(button => {
-        const cost = parseInt(button.dataset.cost);
-        button.disabled = upgrades.includes(button.id) || clicks < cost;
-    });
-}
-
-// Сохранение игры в cookies
-function saveGame() {
-    const gameData = {
-        clicks,
-        clicksPerSecond,
-        upgrades
-    };
-    
-    setCookie('clickerData', JSON.stringify(gameData), 365);
-}
-
-// Работа с cookies
 function setCookie(name, value, days) {
     const date = new Date();
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-    const expires = "expires=" + date.toUTCString();
-    document.cookie = name + "=" + value + ";" + expires + ";path=/";
+    const expires = `expires=${date.toUTCString()}`;
+    document.cookie = `${name}=${value}; ${expires}; path=/`;
 }
 
-function getCookie(name) {
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(';');
-    for (let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) === ' ') c = c.substring(1);
-        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
+// Загрузка сохраненного счетчика
+function loadCounter() {
+    const savedCounter = getCookie('clicker_counter');
+    if (savedCounter) {
+        counter = parseInt(savedCounter);
+        updateCounter();
     }
-    return null;
 }
 
-// Обработчики событий
-clickButton.addEventListener('click', handleClick);
-upgradeButtons.forEach(button => {
-    button.addEventListener('click', () => buyUpgrade(button));
-});
-
-// Запуск игры при загрузке страницы
-window.addEventListener('DOMContentLoaded', initGame);
-
-// Интеграция с Telegram (опционально)
-if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    // Можно добавить дополнительные функции для Telegram
-    // Например, отправку результатов на сервер бота
-    tg.MainButton.setText("Сохранить прогресс");
-    tg.MainButton.show();
-    tg.MainButton.onClick(() => {
-        tg.sendData(JSON.stringify({
-            userId: tg.initDataUnsafe.user.id,
-            clicks: clicks,
-            cps: clicksPerSecond
-        }));
-    });
+// Обновление счетчика на странице
+function updateCounter() {
+    counterElement.textContent = counter;
+    setCookie('clicker_counter', counter, 30); // Сохраняем на 30 дней
 }
+
+// Обработчик клика
+function handleClick() {
+    counter++;
+    updateCounter();
+}
+
+// Инициализация пользователя Telegram
+function initTelegramUser() {
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        const user = tg.initDataUnsafe.user;
+        let userName = user.first_name || '';
+        if (user.last_name) {
+            userName += ' ' + user.last_name;
+        }
+        if (user.username) {
+            userName += ` (@${user.username})`;
+        }
+        usernameElement.textContent = userName || 'Анонимный пользователь';
+        
+        // Можно расширять функционал с данными пользователя
+        // Например, сохранять счет для конкретного пользователя
+    } else {
+        usernameElement.textContent = 'Гость (не из Telegram)';
+    }
+}
+
+// Инициализация приложения
+function initApp() {
+    // Инициализация пользователя Telegram
+    initTelegramUser();
+    
+    // Загрузка сохраненного счетчика
+    loadCounter();
+    
+    // Назначение обработчика клика
+    clickButton.addEventListener('click', handleClick);
+    
+    // Показываем кнопку, если в Telegram WebApp
+    if (tg.platform !== 'unknown') {
+        tg.expand(); // Разворачиваем WebApp на весь экран
+        tg.enableClosingConfirmation(); // Запрос подтверждения при закрытии
+    }
+}
+
+// Запуск приложения
+document.addEventListener('DOMContentLoaded', initApp);
